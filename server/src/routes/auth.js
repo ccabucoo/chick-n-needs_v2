@@ -8,6 +8,7 @@ import { Op } from 'sequelize';
 import { sendVerificationEmail, sendLoginCode, sendPasswordResetEmail } from '../services/email.js';
 import { checkRateLimit, recordFailedAttempt, clearFailedAttempts } from '../utils/rateLimiter.js';
 import { addToDenylist } from '../utils/tokenDenylist.js';
+import { addRefreshToDenylist, isRefreshDenylisted } from '../utils/refreshDenylist.js';
 
 // CSRF token storage (in production, use Redis or database)
 const csrfTokens = new Map();
@@ -89,6 +90,26 @@ function signToken(user) {
   }
   const jti = generateJti();
   return jwt.sign({ uid: user.id, email: user.email, jti }, process.env.JWT_SECRET, { expiresIn: '15m' });
+}
+
+function signRefreshToken(user) {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required');
+  }
+  const jti = generateJti();
+  // 7 days refresh token
+  return jwt.sign({ uid: user.id, type: 'refresh', jti }, process.env.JWT_SECRET, { expiresIn: '7d' });
+}
+
+function setRefreshCookie(res, refreshToken) {
+  const isProd = process.env.NODE_ENV === 'production';
+  res.cookie('refresh_token', refreshToken, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'strict' : 'lax',
+    path: '/api/auth',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  });
 }
 
 // Password strength calculation
@@ -379,6 +400,9 @@ router.post('/login',
       clearFailedAttempts(rateLimitKey);
 
       const token = signToken(user);
+      const refresh = signRefreshToken(user);
+      // Store refresh cookie
+      setRefreshCookie(res, refresh);
       res.json({ 
         token, 
         user: { 
@@ -409,9 +433,48 @@ router.post('/logout', (req, res) => {
     if (decoded.jti && expMs) {
       addToDenylist(decoded.jti, expMs);
     }
+    // Also clear refresh cookie client-side and denylist existing cookie if present
+    const refreshCookie = req.cookies?.refresh_token;
+    if (refreshCookie) {
+      try {
+        const refreshDecoded = jwt.verify(refreshCookie, process.env.JWT_SECRET);
+        const rExpMs = (refreshDecoded.exp || 0) * 1000;
+        if (refreshDecoded.jti && rExpMs) {
+          addRefreshToDenylist(refreshDecoded.jti, rExpMs);
+        }
+      } catch {}
+    }
+    res.clearCookie('refresh_token', { path: '/api/auth' });
     return res.json({ ok: true });
   } catch {
     return res.json({ ok: true });
+  }
+});
+
+// Refresh access token using httpOnly refresh cookie
+router.post('/refresh', (req, res) => {
+  try {
+    const cookie = req.cookies?.refresh_token;
+    if (!cookie) return res.status(401).json({ message: 'Missing refresh token' });
+    if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'Server misconfiguration' });
+    const decoded = jwt.verify(cookie, process.env.JWT_SECRET);
+    if (decoded.type !== 'refresh') return res.status(400).json({ message: 'Invalid token type' });
+    if (isRefreshDenylisted(decoded.jti)) return res.status(401).json({ message: 'Refresh token revoked' });
+
+    // Rotate refresh token: denylist old, issue new
+    const expMs = (decoded.exp || 0) * 1000;
+    if (decoded.jti && expMs) {
+      addRefreshToDenylist(decoded.jti, expMs);
+    }
+
+    // Issue new tokens
+    const user = { id: decoded.uid, email: decoded.email };
+    const newAccess = signToken(user);
+    const newRefresh = signRefreshToken(user);
+    setRefreshCookie(res, newRefresh);
+    return res.json({ token: newAccess });
+  } catch (err) {
+    return res.status(401).json({ message: 'Invalid or expired refresh token' });
   }
 });
 

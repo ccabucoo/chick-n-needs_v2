@@ -18,6 +18,7 @@ import Wishlist from './routes/Wishlist.jsx';
 import Contact from './routes/Contact.jsx';
 import FAQ from './routes/FAQ.jsx';
 import Notifications from './routes/Notifications.jsx';
+import VerifyEmailSent from './routes/VerifyEmailSent.jsx';
 
 function RequireGuest({ children }) {
   const token = (typeof localStorage !== 'undefined' && localStorage.getItem('token')) || '';
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
         </RequireGuest>
       ) },
       { path: '/verify', element: <Verify /> },
+      { path: '/verify-sent', element: <VerifyEmailSent /> },
       { path: '/reset-password', element: <ResetPassword /> }
     ]
   }

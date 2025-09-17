@@ -128,8 +128,8 @@ export default function Register() {
       if (res.ok) {
         setMessage(data.message);
         setTimeout(() => {
-          navigate('/login');
-        }, 2000);
+          navigate('/verify-sent');
+        }, 1000);
       } else {
         if (data.errors) {
           const fieldErrors = {};

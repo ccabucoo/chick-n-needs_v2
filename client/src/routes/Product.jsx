@@ -12,6 +12,13 @@ export default function Product() {
   const [ratingValue, setRatingValue] = useState(5);
   const [reviews, setReviews] = useState([]);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [ratingFilter, setRatingFilter] = useState('all');
+
+  // Filter reviews based on selected rating
+  const filteredReviews = reviews.filter(review => {
+    if (ratingFilter === 'all') return true;
+    return review.rating === parseInt(ratingFilter);
+  });
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/products/${id}`)
@@ -214,20 +221,72 @@ export default function Product() {
       </div>
 
       <div>
-        <h2>Reviews ({Array.isArray(reviews) ? reviews.length : 0})</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2>
+            Reviews ({Array.isArray(reviews) ? reviews.length : 0})
+            {ratingFilter !== 'all' && (
+              <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666', marginLeft: '8px' }}>
+                - Showing {filteredReviews.length} with {ratingFilter} star{ratingFilter !== '1' ? 's' : ''}
+              </span>
+            )}
+          </h2>
+          {reviews && reviews.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '500' }}>Filter by rating:</label>
+              <select 
+                value={ratingFilter} 
+                onChange={(e) => setRatingFilter(e.target.value)}
+                style={{
+                  padding: '6px 12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  backgroundColor: 'white'
+                }}
+              >
+                <option value="all">All ratings</option>
+                <option value="5">★★★★★ (5 stars)</option>
+                <option value="4">★★★★☆ (4 stars)</option>
+                <option value="3">★★★☆☆ (3 stars)</option>
+                <option value="2">★★☆☆☆ (2 stars)</option>
+                <option value="1">★☆☆☆☆ (1 star)</option>
+              </select>
+              {ratingFilter !== 'all' && (
+                <button 
+                  onClick={() => setRatingFilter('all')}
+                  style={{
+                    padding: '6px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: '#f8f9fa',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Clear Filter
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        
         {(!reviews || reviews.length === 0) ? (
           <div>No reviews yet.</div>
+        ) : filteredReviews.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+            No reviews found for the selected rating.
+          </div>
         ) : (
           <div>
-            {(showAllReviews ? reviews : reviews.slice(0, 3)).map((rv, idx) => (
+            {(showAllReviews ? filteredReviews : filteredReviews.slice(0, 3)).map((rv, idx) => (
               <div key={rv.id || idx} style={{ borderTop: '1px solid #eee', padding: '12px 0' }}>
                 <div style={{ fontWeight: '600' }}>Rating: {rv.rating}/5</div>
                 {rv.comment && <div style={{ color: '#444', whiteSpace: 'pre-wrap' }}>{rv.comment}</div>}
               </div>
             ))}
-            {reviews.length > 3 && (
+            {filteredReviews.length > 3 && (
               <button onClick={() => setShowAllReviews(v => !v)} style={{ marginTop: '8px' }}>
-                {showAllReviews ? 'Show less' : 'View all reviews'}
+                {showAllReviews ? 'Show less' : `View all ${filteredReviews.length} reviews`}
               </button>
             )}
           </div>

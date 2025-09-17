@@ -39,6 +39,48 @@ function App() {
     window.location.href = '/';
   };
 
+  // Periodic token-expiry check (every 30s)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const raw = localStorage.getItem('token');
+      const token = raw && raw !== 'undefined' ? raw : '';
+      if (!token) return;
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1] || ''));
+        const expMs = (payload.exp || 0) * 1000;
+        if (Date.now() > expMs) {
+          localStorage.removeItem('token');
+          setIsLoggedIn(false);
+          window.location.href = '/login';
+        }
+      } catch {}
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Inactivity timer: 30 minutes
+  useEffect(() => {
+    let timerId;
+    const reset = () => {
+      clearTimeout(timerId);
+      timerId = setTimeout(() => {
+        const raw = localStorage.getItem('token');
+        const token = raw && raw !== 'undefined' ? raw : '';
+        if (!token) return;
+        localStorage.removeItem('token');
+        setIsLoggedIn(false);
+        window.location.href = '/login';
+      }, 30 * 60 * 1000);
+    };
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    events.forEach(e => window.addEventListener(e, reset, { passive: true }));
+    reset();
+    return () => {
+      clearTimeout(timerId);
+      events.forEach(e => window.removeEventListener(e, reset));
+    };
+  }, []);
+
   return (
     <div>
       <header>
