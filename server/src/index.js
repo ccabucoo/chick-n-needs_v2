@@ -26,6 +26,9 @@ import {
 
 const app = express();
 
+// Trust reverse proxy (Nginx) so secure cookies and HTTPS detection work
+app.set('trust proxy', 1);
+
 // Ensure critical envs are set
 if (!process.env.JWT_SECRET) {
   console.error('Missing JWT_SECRET. Set a strong secret in environment.');
@@ -34,7 +37,16 @@ if (!process.env.JWT_SECRET) {
 
 // CORS must be first so even rate-limit/error responses include CORS headers
 app.use(cors({ 
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    const allowed = [
+      process.env.FRONTEND_URL,
+      process.env.PUBLIC_APP_URL
+    ].filter(Boolean);
+    if (!origin) return callback(null, true);
+    if (allowed.length === 0) return callback(null, origin === 'http://localhost:5173');
+    if (allowed.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'x-csrf-token', 'X-Requested-With']
@@ -83,12 +95,13 @@ app.use('/api/notifications', notificationsRouter);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 async function start() {
   try {
     await sequelize.authenticate();
     await sequelize.sync();
-    app.listen(PORT, () => console.log(`API running on :${PORT}`));
+    app.listen(PORT, HOST, () => console.log(`API running on ${HOST}:${PORT}`));
   } catch (err) {
     console.error('Failed to start server', err);
     process.exit(1);

@@ -1,6 +1,16 @@
 // Auth-aware fetch with automatic refresh and retry
 
-const API_BASE = (typeof import !== 'undefined' && import.meta && import.meta.env && import.meta.env.VITE_API_URL) || 'http://localhost:4000';
+function getApiBase() {
+  try {
+    // Vite provides import.meta.env in the browser build
+    const fromEnv = import.meta && import.meta.env && import.meta.env.VITE_API_URL;
+    return fromEnv || 'https://chickenneeds.shop/api';
+  } catch (e) {
+    return 'https://chickenneeds.shop/api';
+  }
+}
+
+const API_BASE = getApiBase();
 
 function getStoredToken() {
   const raw = (typeof localStorage !== 'undefined' && localStorage.getItem('token')) || '';
@@ -25,7 +35,7 @@ export async function authFetch(input, init = {}) {
   if (res.status !== 401) return res;
 
   // Attempt refresh
-  const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
+  const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
     method: 'POST',
     credentials: 'include'
   });

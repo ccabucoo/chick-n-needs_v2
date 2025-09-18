@@ -204,14 +204,14 @@ CREATE TABLE `product_images` (
 --
 
 INSERT INTO `product_images` (`id`, `url`, `created_at`, `updated_at`, `product_id`) VALUES
-(1, 'http://localhost:4000/assets/Layer Mash.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 1),
-(2, 'http://localhost:4000/assets/Poultry Premix.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 2),
-(3, 'http://localhost:4000/assets/Poultry Vaccine.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 3),
-(4, 'http://localhost:4000/assets/Poultry Antibiotic.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 4),
-(5, 'http://localhost:4000/assets/Poultry Dewormer.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 5),
-(6, 'http://localhost:4000/assets/Automatic Poultry Drinke.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 6),
-(7, 'http://localhost:4000/assets/Poultry Feeder.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 7),
-(8, 'http://localhost:4000/assets/Poultry Netting.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 8);
+(1, 'https://chickenneeds.shop/assets/Layer_Mash.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 1),
+(2, 'https://chickenneeds.shop/assets/Poultry_Premix.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 2),
+(3, 'https://chickenneeds.shop/assets/Poultry_Vaccine.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 3),
+(4, 'https://chickenneeds.shop/assets/Poultry_Antibiotic.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 4),
+(5, 'https://chickenneeds.shop/assets/Poultry_Dewormer.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 5),
+(6, 'https://chickenneeds.shop/assets/Automatic_Poultry_Drinker.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 6),
+(7, 'https://chickenneeds.shop/assets/Poultry_Feeder.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 7),
+(8, 'https://chickenneeds.shop/assets/Poultry_Netting.png', '2025-09-09 16:11:31', '2025-09-09 16:11:31', 8);
 
 -- --------------------------------------------------------
 
