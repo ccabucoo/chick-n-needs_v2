@@ -44,7 +44,7 @@ print_status "Updating system packages..."
 apt update && apt upgrade -y
 
 print_status "Installing required packages..."
-apt install -y curl wget git nginx mysql-server nodejs npm certbot python3-certbot-nginx
+apt install -y curl wget git nginx apache2 mysql-server nodejs npm certbot python3-certbot-nginx
 
 print_status "Installing Node.js 22.x..."
 curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
@@ -68,10 +68,119 @@ mysql -e "CREATE USER IF NOT EXISTS 'chicknneeds_user'@'localhost' IDENTIFIED BY
 mysql -e "GRANT ALL PRIVILEGES ON chicknneeds.* TO 'chicknneeds_user'@'localhost';"
 mysql -e "FLUSH PRIVILEGES;"
 
-print_status "Setting up Nginx configuration..."
+print_status "Setting up web server configuration..."
 
-# Create Nginx configuration for main site
-cat > $NGINX_DIR/chicknneeds.shop << EOF
+# Ask user to choose web server
+echo "Choose your web server:"
+echo "1) Nginx (Recommended)"
+echo "2) Apache"
+read -p "Enter your choice (1 or 2): " webserver_choice
+
+if [ "$webserver_choice" = "2" ]; then
+    print_status "Setting up Apache configuration..."
+    
+    # Enable required Apache modules
+    a2enmod rewrite
+    a2enmod proxy
+    a2enmod proxy_http
+    a2enmod headers
+    a2enmod ssl
+    a2enmod deflate
+    
+    # Create Apache virtual host for main site
+    cat > /etc/apache2/sites-available/chicknneeds.shop.conf << EOF
+<VirtualHost *:80>
+    ServerName chicknneeds.shop
+    ServerAlias www.chicknneeds.shop
+    DocumentRoot $APP_DIR/client/dist
+    
+    # Enable compression
+    LoadModule deflate_module modules/mod_deflate.so
+    <Location />
+        SetOutputFilter DEFLATE
+        SetEnvIfNoCase Request_URI \\
+            \\.(?:gif|jpe?g|png)$ no-gzip dont-vary
+        SetEnvIfNoCase Request_URI \\
+            \\.(?:exe|t?gz|zip|bz2|sit|rar)$ no-gzip dont-vary
+    </Location>
+    
+    # Security headers
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "no-referrer-when-downgrade"
+    
+    # Handle client-side routing
+    <Directory $APP_DIR/client/dist>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+        
+        # Fallback to index.html for client-side routing
+        RewriteEngine On
+        RewriteBase /
+        RewriteRule ^index\\.html$ - [L]
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteRule . /index.html [L]
+    </Directory>
+    
+    # Cache static assets
+    <LocationMatch "\\.(css|js|png|jpg|jpeg|gif|ico|svg)$">
+        ExpiresActive On
+        ExpiresDefault "access plus 1 year"
+        Header append Cache-Control "public, immutable"
+    </LocationMatch>
+    
+    # API proxy
+    ProxyPreserveHost On
+    ProxyPass /api/ http://localhost:4000/api/
+    ProxyPassReverse /api/ http://localhost:4000/api/
+    
+    # Logging
+    ErrorLog \${APACHE_LOG_DIR}/chicknneeds_error.log
+    CustomLog \${APACHE_LOG_DIR}/chicknneeds_access.log combined
+</VirtualHost>
+EOF
+
+    # Create Apache virtual host for API subdomain
+    cat > /etc/apache2/sites-available/api.chicknneeds.shop.conf << EOF
+<VirtualHost *:80>
+    ServerName api.chicknneeds.shop
+    DocumentRoot $APP_DIR
+    
+    # API proxy
+    ProxyPreserveHost On
+    ProxyPass / http://localhost:4000/
+    ProxyPassReverse / http://localhost:4000/
+    
+    # Logging
+    ErrorLog \${APACHE_LOG_DIR}/api_chicknneeds_error.log
+    CustomLog \${APACHE_LOG_DIR}/api_chicknneeds_access.log combined
+</VirtualHost>
+EOF
+
+    # Enable Apache sites
+    a2ensite chicknneeds.shop.conf
+    a2ensite api.chicknneeds.shop.conf
+    a2dissite 000-default.conf
+    
+    # Test Apache configuration
+    apache2ctl configtest
+    
+    # Stop Nginx and start Apache
+    systemctl stop nginx
+    systemctl disable nginx
+    systemctl restart apache2
+    systemctl enable apache2
+    
+    print_status "Apache configuration completed!"
+    
+else
+    print_status "Setting up Nginx configuration..."
+
+    # Create Nginx configuration for main site
+    cat > $NGINX_DIR/chicknneeds.shop << EOF
 server {
     listen 80;
     server_name chicknneeds.shop www.chicknneeds.shop;
@@ -143,18 +252,31 @@ EOF
 ln -sf $NGINX_DIR/chicknneeds.shop $NGINX_ENABLED/
 ln -sf $NGINX_DIR/api.chicknneeds.shop $NGINX_ENABLED/
 
-# Remove default site
-rm -f $NGINX_ENABLED/default
+    # Remove default site
+    rm -f $NGINX_ENABLED/default
 
-print_status "Testing Nginx configuration..."
-nginx -t
+    print_status "Testing Nginx configuration..."
+    nginx -t
 
-print_status "Restarting Nginx..."
-systemctl restart nginx
-systemctl enable nginx
+    print_status "Restarting Nginx..."
+    systemctl restart nginx
+    systemctl enable nginx
+    
+    # Stop Apache if it's running
+    systemctl stop apache2
+    systemctl disable apache2
+    
+    print_status "Nginx configuration completed!"
+fi
 
 print_status "Setting up SSL certificates..."
-certbot --nginx -d chicknneeds.shop -d www.chicknneeds.shop -d api.chicknneeds.shop --non-interactive --agree-tos --email admin@chicknneeds.shop
+
+# Install SSL certificates based on web server choice
+if [ "$webserver_choice" = "2" ]; then
+    certbot --apache -d chicknneeds.shop -d www.chicknneeds.shop -d api.chicknneeds.shop --non-interactive --agree-tos --email admin@chicknneeds.shop
+else
+    certbot --nginx -d chicknneeds.shop -d www.chicknneeds.shop -d api.chicknneeds.shop --non-interactive --agree-tos --email admin@chicknneeds.shop
+fi
 
 print_status "Setting up firewall..."
 ufw allow 22
