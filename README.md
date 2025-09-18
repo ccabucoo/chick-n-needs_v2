@@ -132,7 +132,7 @@ Database Schema (tables)
 - contact_messages: id, name, email, subject, order_no, message, timestamps
 
 API Highlights
-- Auth: /api/auth/register, /api/auth/login, /api/auth/logout, /api/auth/forgot-password, /api/auth/reset-password, /api/auth/verify
+- Auth: /api/auth/register, /api/auth/login, /api/auth/logout, /api/auth/forgot-password, /api/auth/reset-password, /api/auth/verify, /api/auth/refresh
 - Products: /api/products (filters + pagination), /api/products/:id
 - Reviews: /api/reviews/:productId (GET paginated, POST create)
 - Cart: /api/cart (GET/POST), /api/cart/:id (PATCH/DELETE)
@@ -142,7 +142,10 @@ API Highlights
 - Notifications: /api/notifications (GET)
 
 Auth & Sessions
-- JWT auth with 15‑min access tokens; tokens include jti and are deny‑listable on logout
+- Access token: short‑lived JWT (~15m) sent as Authorization: Bearer <token>; includes jti and can be deny‑listed on logout
+- Refresh token: httpOnly, Secure, SameSite=Strict cookie; rotated on refresh and deny‑listed on rotation/logout
+- Auto‑refresh: POST /api/auth/refresh issues a new access token when the cookie is valid
+- Auto‑logout: client logs out on access‑token expiry and after inactivity timeout
 - Email verification required before login completes
 - Rate limiting on auth endpoints
 
@@ -154,7 +157,7 @@ Security Notes
 
 App Flows & Scenarios
 Registration (/api/auth/register)
-- Success: user created, verification email sent (or logged in console if email not configured)
+- Success: user created, verification email sent (or logged in console if email not configured); frontend redirects to /verify-sent
 - Email already registered: 400 { message: "Email already registered" }
 - Username taken: 400 { message: "Username already taken" }
 - Weak or invalid input: 400 with validation messages
@@ -168,10 +171,10 @@ Login (/api/auth/login)
 - Wrong credentials: 400 with remaining attempts
 - Too many attempts: 423 account lock for 15 minutes
 - Second factor: 206 { requiresCode: true, resendIn } → user submits code to complete login
-- Success: { token, user }
+- Success: { token, user } and sets a refresh‑token cookie (httpOnly) for silent token renewal
 
 Logout (/api/auth/logout)
-- Denylists current token’s jti until expiry; future requests get 401
+- Clears the refresh‑token cookie and deny‑lists the current tokens; future requests get 401
 
 Forgot Password (/api/auth/forgot-password)
 - Always returns success (no email enumeration)
@@ -209,7 +212,7 @@ Notifications
 
 Development Notes
 - Run server with NODE_ENV=development to include helpful error details; production hides stacks
-- Avoid storing tokens in localStorage in production; prefer httpOnly cookies + refresh flow (future enhancement)
+- Production: prefer httpOnly refresh cookies + short‑lived access tokens (implemented). If mirroring the access token in storage for convenience, scope it carefully and always clear on logout/expiry.
 
 Seeding Examples
 Categories

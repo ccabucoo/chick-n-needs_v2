@@ -8,6 +8,7 @@ export default function ResetPassword() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [csrfToken, setCsrfToken] = useState('');
+  const [tokenValid, setTokenValid] = useState(true);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
@@ -15,10 +16,28 @@ export default function ResetPassword() {
 
   useEffect(() => {
     if (!token) {
+      setTokenValid(false);
       setError('Invalid or missing reset token. Please request a new password reset.');
-    } else {
-      // Fetch CSRF token
-      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/auth/csrf-token`, {
+      return;
+    }
+
+    // Validate reset token first
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/auth/validate-reset?token=${encodeURIComponent(token)}`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(async res => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.valid === false) {
+        setTokenValid(false);
+        setError(data.message || 'This reset link is invalid or has expired.');
+        return;
+      }
+      setTokenValid(true);
+
+      // Fetch CSRF token only if reset token is valid
+      return fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/auth/csrf-token`, {
         method: 'GET',
         credentials: 'include'
       })
@@ -27,11 +46,12 @@ export default function ResetPassword() {
         if (data.csrfToken) {
           setCsrfToken(data.csrfToken);
         }
-      })
-      .catch(err => {
-        console.warn('Failed to fetch CSRF token:', err);
       });
-    }
+    })
+    .catch(() => {
+      setTokenValid(false);
+      setError('This reset link is invalid or has expired.');
+    });
   }, [token]);
 
   const handleSubmit = async (e) => {
@@ -137,6 +157,25 @@ export default function ResetPassword() {
           >
             Go to Login
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // If token is invalid/expired, render nothing (or minimal message)
+  if (!tokenValid) {
+    return (
+      <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px' }}>
+        <div style={{ 
+          backgroundColor: '#f8d7da', 
+          color: '#721c24', 
+          padding: '12px', 
+          borderRadius: '4px', 
+          marginBottom: '20px',
+          border: '1px solid #f5c6cb',
+          textAlign: 'center'
+        }}>
+          {error || 'This reset link is invalid or has expired.'}
         </div>
       </div>
     );
