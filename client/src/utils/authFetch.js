@@ -4,9 +4,9 @@ function getApiBase() {
   try {
     // Vite provides import.meta.env in the browser build
     const fromEnv = import.meta && import.meta.env && import.meta.env.VITE_API_URL;
-    return fromEnv || 'https://chickenneeds.shop/api';
+    return fromEnv || 'https://chicknneeds.shop/api';
   } catch (e) {
-    return 'https://chickenneeds.shop/api';
+    return 'https://chicknneeds.shop/api';
   }
 }
 
@@ -35,7 +35,7 @@ export async function authFetch(input, init = {}) {
   if (res.status !== 401) return res;
 
   // Attempt refresh
-  const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+  const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
     method: 'POST',
     credentials: 'include'
   });

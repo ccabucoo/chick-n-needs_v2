@@ -1,123 +1,90 @@
 #!/bin/bash
 
-# Quick Deployment Script for Hostinger VPS
-# Run this script on your VPS after uploading files
+# Chick'N Needs VPS Deployment Script
+# Run this script on your VPS to deploy the application
 
-echo "🚀 Starting Chick'N Needs deployment..."
+echo "🚀 Starting Chick'N Needs VPS Deployment..."
 
-# Set variables
-DOMAIN="chickenneeds.shop"
-WEB_ROOT="/var/www/chickenneeds.shop"
-SERVICE_USER="www-data"
+# Update system packages
+echo "📦 Updating system packages..."
+sudo apt update && sudo apt upgrade -y
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+# Install Node.js 22.x
+echo "📦 Installing Node.js 22.x..."
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
 
-# Function to print colored output
-print_status() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
+# Install MySQL Server
+echo "📦 Installing MySQL Server..."
+sudo apt-get install -y mysql-server
 
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
+# Install Nginx
+echo "📦 Installing Nginx..."
+sudo apt-get install -y nginx
 
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+# Install PM2 for process management
+echo "📦 Installing PM2..."
+sudo npm install -g pm2
 
-# Check if running as root
-if [ "$EUID" -ne 0 ]; then
-    print_error "Please run as root (use sudo)"
-    exit 1
-fi
+# Create application directory
+echo "📁 Creating application directory..."
+sudo mkdir -p /var/www/chicknneeds
+sudo chown -R $USER:$USER /var/www/chicknneeds
 
-print_status "Setting up file permissions..."
-chown -R $SERVICE_USER:$SERVICE_USER $WEB_ROOT/client/dist
-chown -R root:root $WEB_ROOT/server
-chmod -R 755 $WEB_ROOT/client/dist
-chmod -R 700 $WEB_ROOT/server
+# Create MySQL database
+echo "🗄️ Setting up MySQL database..."
+sudo mysql -e "CREATE DATABASE IF NOT EXISTS chicknneeds;"
+sudo mysql -e "CREATE USER IF NOT EXISTS 'chicknneeds'@'localhost' IDENTIFIED BY 'your_secure_password';"
+sudo mysql -e "GRANT ALL PRIVILEGES ON chicknneeds.* TO 'chicknneeds'@'localhost';"
+sudo mysql -e "FLUSH PRIVILEGES;"
 
-print_status "Installing server dependencies..."
-cd $WEB_ROOT/server
+# Import database schema
+echo "🗄️ Importing database schema..."
+sudo mysql -u chicknneeds -p chicknneeds < database/schema.sql
+
+# Install server dependencies
+echo "📦 Installing server dependencies..."
+cd server
 npm install --production
 
-print_status "Setting up PM2 process manager..."
+# Install client dependencies and build
+echo "📦 Installing client dependencies and building..."
+cd ../client
+npm install
+npm run build
+
+# Copy built files to web root
+echo "📁 Copying built files to web root..."
+sudo cp -r dist/* /var/www/chicknneeds/
+
+# Setup PM2 ecosystem
+echo "⚙️ Setting up PM2 ecosystem..."
+cd ../server
 pm2 start ecosystem.config.js
-pm2 save
-pm2 startup
 
-print_status "Enabling Apache modules..."
-a2enmod rewrite ssl headers proxy proxy_http
-systemctl restart apache2
+# Setup Nginx configuration
+echo "⚙️ Setting up Nginx configuration..."
+sudo cp ../nginx.conf /etc/nginx/sites-available/chicknneeds
+sudo ln -sf /etc/nginx/sites-available/chicknneeds /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
 
-print_status "Enabling Apache site..."
-a2ensite chickenneeds.shop.conf
-a2dissite 000-default
-systemctl reload apache2
+# Test Nginx configuration
+echo "🔍 Testing Nginx configuration..."
+sudo nginx -t
 
-print_status "Configuring firewall..."
-ufw allow ssh
-ufw allow 'Apache Full'
-ufw allow 4000
-ufw --force enable
+# Restart services
+echo "🔄 Restarting services..."
+sudo systemctl restart nginx
+sudo systemctl enable nginx
+sudo systemctl restart mysql
+sudo systemctl enable mysql
 
-print_status "Testing services..."
+# Setup SSL with Let's Encrypt (optional)
+echo "🔒 Setting up SSL with Let's Encrypt..."
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d chicknneeds.shop
 
-# Test Apache
-if systemctl is-active --quiet apache2; then
-    print_status "✅ Apache is running"
-else
-    print_error "❌ Apache is not running"
-fi
-
-# Test MySQL
-if systemctl is-active --quiet mysql; then
-    print_status "✅ MySQL is running"
-else
-    print_error "❌ MySQL is not running"
-fi
-
-# Test PM2
-if pm2 list | grep -q "chicknneeds-api"; then
-    print_status "✅ PM2 process is running"
-else
-    print_error "❌ PM2 process is not running"
-fi
-
-print_status "Creating backup directory..."
-mkdir -p /root/backups
-
-print_status "Setting up log rotation..."
-cat > /etc/logrotate.d/chicknneeds << EOF
-/var/log/pm2/*.log {
-    daily
-    missingok
-    rotate 7
-    compress
-    delaycompress
-    notifempty
-    create 644 root root
-    postrotate
-        pm2 reloadLogs
-    endscript
-}
-EOF
-
-print_status "🎉 Deployment completed!"
-print_warning "Don't forget to:"
-print_warning "1. Update your .env file with actual database credentials"
-print_warning "2. Import your database schema"
-print_warning "3. Set up SSL certificate with: certbot --apache -d $DOMAIN"
-print_warning "4. Test your website at https://$DOMAIN"
-
-echo ""
-print_status "Useful commands:"
-echo "  pm2 status          - Check PM2 processes"
-echo "  pm2 logs            - View application logs"
-echo "  systemctl status apache2 - Check Apache status"
-echo "  systemctl status mysql - Check MySQL status"
-echo "  tail -f /var/log/apache2/chickenneeds.shop_error.log - View Apache errors"
+echo "✅ Deployment completed successfully!"
+echo "🌐 Your website should be available at: https://chicknneeds.shop"
+echo "🔧 API endpoint: https://chicknneeds.shop/api"
+echo "📊 Monitor your app with: pm2 monit"
