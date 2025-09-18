@@ -1,195 +1,105 @@
-# Chick'N Needs VPS Deployment Guide for Hostinger
-
-## Overview
-This guide will help you deploy your Chick'N Needs e-commerce website to your Hostinger VPS with domain `chicknneeds.shop` and IP `168.231.119.100`.
+# Chick'N Needs - Hostinger VPS Deployment Guide
 
 ## Prerequisites
-- Hostinger VPS access (SSH)
-- Domain `chicknneeds.shop` pointing to your VPS IP `168.231.119.100`
-- Your existing API keys (Brevo/Sendinblue)
+- Hostinger VPS with Ubuntu 20.04+ or CentOS 7+
+- Domain: chicknneeds.shop
+- IP: 168.231.119.100
+- Node.js 22.0.18
+- MySQL
+- Apache/Nginx
 
-## Step 1: Connect to Your VPS
+## Step-by-Step Deployment
 
-### Using SSH (Windows PowerShell or Command Prompt)
+### 1. Connect to Your VPS
 ```bash
 ssh root@168.231.119.100
-# or if you have a specific username:
-ssh your_username@168.231.119.100
+# or
+ssh your-username@168.231.119.100
 ```
 
-### Using Hostinger hPanel
-1. Go to your Hostinger hPanel
-2. Navigate to VPS section
-3. Click "SSH Access" or "Terminal"
-
-## Step 2: Update System and Install Dependencies
-
-Run these commands on your VPS:
-
+### 2. Run the Deployment Script
 ```bash
-# Update system packages
-sudo apt update && sudo apt upgrade -y
+# Make the script executable
+chmod +x deploy.sh
 
-# Install Node.js 22.x
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Verify Node.js installation
-node --version  # Should show v22.x.x
-npm --version
-
-# Install MySQL Server
-sudo apt-get install -y mysql-server
-
-# Install Nginx
-sudo apt-get install -y nginx
-
-# Install PM2 for process management
-sudo npm install -g pm2
-
-# Install Git (if not already installed)
-sudo apt-get install -y git
+# Run the deployment script
+./deploy.sh
 ```
 
-## Step 3: Clone Your Repository
-
-```bash
-# Create application directory
-sudo mkdir -p /var/www/chicknneeds
-sudo chown -R $USER:$USER /var/www/chicknneeds
-cd /var/www/chicknneeds
-
-# Clone your repository
-git clone https://github.com/ccabucoo/chick-n-needs_v2.git .
-
-# Switch to Hostinger branch (if you've created it)
-git checkout Hostinger
-```
-
-## Step 4: Setup MySQL Database
-
+### 3. Configure MySQL Database
 ```bash
 # Secure MySQL installation
 sudo mysql_secure_installation
 
-# Create database and user
+# Login to MySQL
 sudo mysql -u root -p
-```
 
-In MySQL prompt, run:
-```sql
+# Create database and user
 CREATE DATABASE chicknneeds;
-CREATE USER 'chicknneeds'@'localhost' IDENTIFIED BY 'your_secure_password_here';
-GRANT ALL PRIVILEGES ON chicknneeds.* TO 'chicknneeds'@'localhost';
+CREATE USER 'chicknneeds_user'@'localhost' IDENTIFIED BY 'your-secure-password';
+GRANT ALL PRIVILEGES ON chicknneeds.* TO 'chicknneeds_user'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
-```
 
-```bash
 # Import database schema
-sudo mysql -u chicknneeds -p chicknneeds < database/schema.sql
+mysql -u chicknneeds_user -p chicknneeds < /var/www/chicknneeds/chick-n-needs_v2/database/schema.sql
 ```
 
-## Step 5: Configure Environment Variables
-
-### Server Environment
+### 4. Configure Environment Variables
 ```bash
-cd /var/www/chicknneeds/server
-cp env.production .env
-nano .env
-```
+# Edit server environment file
+nano /var/www/chicknneeds/chick-n-needs_v2/server/.env
 
-Update the `.env` file with your actual values:
-```env
-# Server Configuration
+# Update these values:
+NODE_ENV=production
 PORT=4000
 HOST=0.0.0.0
-NODE_ENV=production
-
-# JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-
-# Database Configuration
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
-MYSQL_USER=chicknneeds
-MYSQL_PASSWORD=your_secure_password_here
+MYSQL_USER=chicknneeds_user
+MYSQL_PASSWORD=your-mysql-password
 MYSQL_DATABASE=chicknneeds
-
-# Application URLs
 PUBLIC_APP_URL=https://chicknneeds.shop
 FRONTEND_URL=https://chicknneeds.shop
+BREVO_API_KEY=your-brevo-api-key-here
+BCRYPT_ROUNDS=12
 
-# Email Configuration (Keep your existing API key)
-BREVO_API_KEY=your-existing-brevo-api-key
+# Edit client environment file
+nano /var/www/chicknneeds/chick-n-needs_v2/client/.env
 
-# Security
-CSRF_SECRET=your-csrf-secret-key-change-this
-
-# File Upload Configuration
-MAX_FILE_SIZE=10485760
-UPLOAD_PATH=./uploads
-```
-
-### Client Environment
-```bash
-cd /var/www/chicknneeds/client
-cp env.production .env
-nano .env
-```
-
-Update the `.env` file:
-```env
-# Client Environment Variables
+# Update this value:
 VITE_API_URL=https://chicknneeds.shop/api
-VITE_PUBLIC_URL=https://chicknneeds.shop
 ```
 
-## Step 6: Install Dependencies and Build
-
-### Server Dependencies
+### 5. Install and Configure Nginx
 ```bash
-cd /var/www/chicknneeds/server
-npm install --production
-```
+# Install Nginx
+sudo apt install nginx -y
 
-### Client Dependencies and Build
-```bash
-cd /var/www/chicknneeds/client
-npm install
-npm run build
-```
-
-## Step 7: Setup Nginx Configuration
-
-```bash
-# Copy Nginx configuration
-sudo cp /var/www/chicknneeds/nginx.conf /etc/nginx/sites-available/chicknneeds
+# Copy the nginx configuration
+sudo cp /var/www/chicknneeds/chick-n-needs_v2/nginx.conf /etc/nginx/sites-available/chicknneeds.shop
 
 # Enable the site
-sudo ln -sf /etc/nginx/sites-available/chicknneeds /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/chicknneeds.shop /etc/nginx/sites-enabled/
 
 # Remove default site
-sudo rm -f /etc/nginx/sites-enabled/default
+sudo rm /etc/nginx/sites-enabled/default
 
-# Test Nginx configuration
+# Test nginx configuration
 sudo nginx -t
 
-# Restart Nginx
+# Restart nginx
 sudo systemctl restart nginx
 sudo systemctl enable nginx
 ```
 
-## Step 8: Setup PM2 Process Manager
-
+### 6. Start the Application with PM2
 ```bash
-cd /var/www/chicknneeds/server
+# Navigate to server directory
+cd /var/www/chicknneeds/chick-n-needs_v2/server
 
-# Create PM2 log directory
-sudo mkdir -p /var/log/pm2
-sudo chown -R $USER:$USER /var/log/pm2
-
-# Start the application with PM2
+# Start the application
 pm2 start ecosystem.config.js
 
 # Save PM2 configuration
@@ -197,14 +107,22 @@ pm2 save
 
 # Setup PM2 to start on boot
 pm2 startup
-# Follow the instructions provided by the command above
+sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u $USER --hp $HOME
 ```
 
-## Step 9: Setup SSL Certificate (Let's Encrypt)
+### 7. Configure Firewall
+```bash
+# Allow SSH, HTTP, HTTPS, and Node.js port
+sudo ufw allow ssh
+sudo ufw allow 'Nginx Full'
+sudo ufw allow 4000
+sudo ufw --force enable
+```
 
+### 8. Setup SSL Certificate (Let's Encrypt)
 ```bash
 # Install Certbot
-sudo apt install -y certbot python3-certbot-nginx
+sudo apt install certbot python3-certbot-nginx -y
 
 # Obtain SSL certificate
 sudo certbot --nginx -d chicknneeds.shop -d www.chicknneeds.shop
@@ -213,170 +131,92 @@ sudo certbot --nginx -d chicknneeds.shop -d www.chicknneeds.shop
 sudo certbot renew --dry-run
 ```
 
-## Step 10: Configure Firewall
-
+### 9. Test the Deployment
 ```bash
-# Enable UFW firewall
-sudo ufw enable
+# Check if the API is running
+curl http://localhost:4000/api/health
 
-# Allow SSH
-sudo ufw allow ssh
+# Check if the frontend is accessible
+curl http://localhost
 
-# Allow HTTP and HTTPS
-sudo ufw allow 'Nginx Full'
-
-# Allow MySQL (if needed from external)
-sudo ufw allow 3306
-
-# Check status
-sudo ufw status
-```
-
-## Step 11: Copy Built Files to Web Root
-
-```bash
-# Copy built client files to web root
-sudo cp -r /var/www/chicknneeds/client/dist/* /var/www/chicknneeds/
-
-# Set proper permissions
-sudo chown -R www-data:www-data /var/www/chicknneeds
-sudo chmod -R 755 /var/www/chicknneeds
-```
-
-## Step 12: Test Your Deployment
-
-### Check Services Status
-```bash
 # Check PM2 status
 pm2 status
 
-# Check Nginx status
+# Check nginx status
 sudo systemctl status nginx
 
 # Check MySQL status
 sudo systemctl status mysql
-
-# Check PM2 logs
-pm2 logs chicknneeds-api
 ```
 
-### Test URLs
-- Frontend: https://chicknneeds.shop
-- API Health: https://chicknneeds.shop/api/health
-- API Base: https://chicknneeds.shop/api
+### 10. Domain Configuration
+Make sure your domain chicknneeds.shop points to IP 168.231.119.100:
+- A record: chicknneeds.shop → 168.231.119.100
+- A record: www.chicknneeds.shop → 168.231.119.100
 
-## Step 13: Domain Configuration
+## Useful Commands
 
-### DNS Settings (if not already done)
-In your domain registrar's DNS settings, ensure:
-- A record: `chicknneeds.shop` → `168.231.119.100`
-- A record: `www.chicknneeds.shop` → `168.231.119.100`
-
-## Step 14: Final Verification
-
-### Test the Complete Flow
-1. Visit https://chicknneeds.shop
-2. Try user registration
-3. Check email verification (if configured)
-4. Test login
-5. Browse products
-6. Add items to cart
-7. Test checkout process
-
-### Monitor Application
+### PM2 Commands
 ```bash
-# Monitor PM2 processes
-pm2 monit
+pm2 status                    # Check status
+pm2 logs chicknneeds-api      # View logs
+pm2 restart chicknneeds-api   # Restart app
+pm2 stop chicknneeds-api      # Stop app
+pm2 delete chicknneeds-api    # Delete app
+```
 
-# View real-time logs
-pm2 logs chicknneeds-api --lines 50
+### Nginx Commands
+```bash
+sudo nginx -t                 # Test configuration
+sudo systemctl reload nginx   # Reload configuration
+sudo systemctl restart nginx  # Restart nginx
+sudo systemctl status nginx  # Check status
+```
 
-# Restart application if needed
-pm2 restart chicknneeds-api
+### MySQL Commands
+```bash
+sudo systemctl status mysql   # Check status
+sudo systemctl restart mysql  # Restart MySQL
+mysql -u chicknneeds_user -p chicknneeds  # Connect to database
 ```
 
 ## Troubleshooting
 
+### Check Logs
+```bash
+# Application logs
+pm2 logs chicknneeds-api
+
+# Nginx logs
+sudo tail -f /var/log/nginx/error.log
+sudo tail -f /var/log/nginx/access.log
+
+# System logs
+sudo journalctl -u nginx
+sudo journalctl -u mysql
+```
+
 ### Common Issues
+1. **Port 4000 not accessible**: Check firewall settings
+2. **Database connection failed**: Verify MySQL credentials in .env
+3. **SSL certificate issues**: Ensure domain points to correct IP
+4. **CORS errors**: Check FRONTEND_URL and PUBLIC_APP_URL in .env
 
-1. **Port 4000 not accessible**
-   ```bash
-   sudo ufw allow 4000
-   ```
+## Security Checklist
+- [ ] Change default MySQL root password
+- [ ] Use strong JWT secret
+- [ ] Enable firewall
+- [ ] Setup SSL certificate
+- [ ] Regular security updates
+- [ ] Monitor logs for suspicious activity
 
-2. **Database connection issues**
-   ```bash
-   sudo systemctl restart mysql
-   # Check MySQL logs
-   sudo tail -f /var/log/mysql/error.log
-   ```
-
-3. **Nginx configuration errors**
-   ```bash
-   sudo nginx -t
-   sudo systemctl restart nginx
-   ```
-
-4. **PM2 process not starting**
-   ```bash
-   pm2 logs chicknneeds-api
-   pm2 restart chicknneeds-api
-   ```
-
-### Useful Commands
-
+## Backup Strategy
 ```bash
-# Restart all services
-sudo systemctl restart nginx mysql
-pm2 restart all
+# Database backup
+mysqldump -u chicknneeds_user -p chicknneeds > backup_$(date +%Y%m%d_%H%M%S).sql
 
-# Check disk space
-df -h
-
-# Check memory usage
-free -h
-
-# Check running processes
-ps aux | grep node
+# Application backup
+tar -czf chicknneeds_backup_$(date +%Y%m%d_%H%M%S).tar.gz /var/www/chicknneeds/
 ```
 
-## Maintenance
-
-### Regular Updates
-```bash
-# Update system packages
-sudo apt update && sudo apt upgrade -y
-
-# Update Node.js dependencies
-cd /var/www/chicknneeds/server && npm update
-cd /var/www/chicknneeds/client && npm update
-
-# Rebuild client
-cd /var/www/chicknneeds/client && npm run build
-sudo cp -r dist/* /var/www/chicknneeds/
-```
-
-### Backup Database
-```bash
-# Create database backup
-mysqldump -u chicknneeds -p chicknneeds > backup_$(date +%Y%m%d_%H%M%S).sql
-```
-
-## Security Notes
-
-1. **Change default passwords** for MySQL and system users
-2. **Keep system updated** regularly
-3. **Monitor logs** for suspicious activity
-4. **Use strong JWT secrets** and API keys
-5. **Enable firewall** and configure properly
-6. **Regular backups** of database and files
-
-## Support
-
-If you encounter issues:
-1. Check PM2 logs: `pm2 logs chicknneeds-api`
-2. Check Nginx logs: `sudo tail -f /var/log/nginx/error.log`
-3. Check MySQL logs: `sudo tail -f /var/log/mysql/error.log`
-4. Verify all services are running: `sudo systemctl status nginx mysql`
-
-Your Chick'N Needs website should now be live at https://chicknneeds.shop! 🎉
+Your Chick'N Needs website should now be live at https://chicknneeds.shop!

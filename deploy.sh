@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Chick'N Needs VPS Deployment Script
-# Run this script on your VPS to deploy the application
+# Run this script on your Hostinger VPS
 
-echo "🚀 Starting Chick'N Needs VPS Deployment..."
+echo "🚀 Starting Chick'N Needs deployment..."
 
 # Update system packages
 echo "📦 Updating system packages..."
@@ -16,11 +16,11 @@ sudo apt-get install -y nodejs
 
 # Install MySQL Server
 echo "📦 Installing MySQL Server..."
-sudo apt-get install -y mysql-server
+sudo apt install -y mysql-server
 
-# Install Nginx
-echo "📦 Installing Nginx..."
-sudo apt-get install -y nginx
+# Install Apache
+echo "📦 Installing Apache..."
+sudo apt install -y apache2
 
 # Install PM2 for process management
 echo "📦 Installing PM2..."
@@ -31,60 +31,44 @@ echo "📁 Creating application directory..."
 sudo mkdir -p /var/www/chicknneeds
 sudo chown -R $USER:$USER /var/www/chicknneeds
 
-# Create MySQL database
-echo "🗄️ Setting up MySQL database..."
-sudo mysql -e "CREATE DATABASE IF NOT EXISTS chicknneeds;"
-sudo mysql -e "CREATE USER IF NOT EXISTS 'chicknneeds'@'localhost' IDENTIFIED BY 'your_secure_password';"
-sudo mysql -e "GRANT ALL PRIVILEGES ON chicknneeds.* TO 'chicknneeds'@'localhost';"
-sudo mysql -e "FLUSH PRIVILEGES;"
+# Navigate to application directory
+cd /var/www/chicknneeds
 
-# Import database schema
-echo "🗄️ Importing database schema..."
-sudo mysql -u chicknneeds -p chicknneeds < database/schema.sql
+# Clone repository (if not already present)
+if [ ! -d "chick-n-needs_v2" ]; then
+    echo "📥 Cloning repository..."
+    git clone https://github.com/ccabucoo/chick-n-needs_v2.git
+fi
+
+cd chick-n-needs_v2
+
+# Switch to Hostinger branch
+echo "🌿 Switching to Hostinger branch..."
+git checkout Hostinger
 
 # Install server dependencies
 echo "📦 Installing server dependencies..."
 cd server
 npm install --production
 
-# Install client dependencies and build
-echo "📦 Installing client dependencies and building..."
+# Install client dependencies
+echo "📦 Installing client dependencies..."
 cd ../client
 npm install
+
+# Build client for production
+echo "🏗️ Building client for production..."
 npm run build
 
-# Copy built files to web root
-echo "📁 Copying built files to web root..."
-sudo cp -r dist/* /var/www/chicknneeds/
-
-# Setup PM2 ecosystem
-echo "⚙️ Setting up PM2 ecosystem..."
+# Copy environment files
+echo "⚙️ Setting up environment files..."
+cp env.production .env
 cd ../server
-pm2 start ecosystem.config.js
+cp env.production .env
 
-# Setup Nginx configuration
-echo "⚙️ Setting up Nginx configuration..."
-sudo cp ../nginx.conf /etc/nginx/sites-available/chicknneeds
-sudo ln -sf /etc/nginx/sites-available/chicknneeds /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
-
-# Test Nginx configuration
-echo "🔍 Testing Nginx configuration..."
-sudo nginx -t
-
-# Restart services
-echo "🔄 Restarting services..."
-sudo systemctl restart nginx
-sudo systemctl enable nginx
-sudo systemctl restart mysql
-sudo systemctl enable mysql
-
-# Setup SSL with Let's Encrypt (optional)
-echo "🔒 Setting up SSL with Let's Encrypt..."
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d chicknneeds.shop
-
-echo "✅ Deployment completed successfully!"
-echo "🌐 Your website should be available at: https://chicknneeds.shop"
-echo "🔧 API endpoint: https://chicknneeds.shop/api"
-echo "📊 Monitor your app with: pm2 monit"
+echo "✅ Deployment script completed!"
+echo "📋 Next steps:"
+echo "1. Configure MySQL database"
+echo "2. Update .env files with your actual values"
+echo "3. Start the application with PM2"
+echo "4. Configure Apache virtual host"
