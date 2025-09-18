@@ -9,6 +9,8 @@ export default function Profile() {
   const [form, setForm] = useState({ firstName: '', lastName: '', phone: '' });
   const [newAddress, setNewAddress] = useState({ line1: '', line2: '', barangay: '', city: '', state: '', postalCode: '', country: 'Philippines' });
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [changing, setChanging] = useState(false);
+  const [pwMsg, setPwMsg] = useState('');
   const token = localStorage.getItem('token');
 
   useEffect(() => {
@@ -70,25 +72,32 @@ export default function Profile() {
           <div>
             <button
               onClick={async () => {
+                setPwMsg('');
+                setChanging(true);
                 try {
                   const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/auth/forgot-password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: data.email })
                   });
+                  const d = await res.json().catch(() => ({}));
                   if (res.ok) {
                     setResetEmailSent(true);
+                    setPwMsg(d.message || 'If an account exists, a reset email was sent.');
                     setTimeout(() => setResetEmailSent(false), 5000);
                   } else {
-                    const d = await res.json().catch(() => ({}));
-                    alert(d.message || 'Failed to send reset email');
+                    setPwMsg(d.message || `Server error (${res.status})`);
                   }
-                } catch {
-                  alert('Network error');
+                } catch (err) {
+                  setPwMsg('Network error: ' + (err?.message || 'Request failed'));
+                } finally {
+                  setChanging(false);
                 }
               }}
-            >Change Password</button>
+              disabled={changing}
+            >{changing ? 'Sending...' : 'Send password reset email'}</button>
             {resetEmailSent && <div>Reset email sent. Please check your inbox.</div>}
+            {pwMsg && <div>{pwMsg}</div>}
           </div>
 
           <form onSubmit={async (e) => {

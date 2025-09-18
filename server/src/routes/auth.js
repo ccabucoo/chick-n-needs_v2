@@ -7,7 +7,7 @@ import { User, EmailToken } from '../models/index.js';
 import { Op } from 'sequelize';
 import { sendVerificationEmail, sendLoginCode, sendPasswordResetEmail } from '../services/email.js';
 import { checkRateLimit, recordFailedAttempt, clearFailedAttempts } from '../utils/rateLimiter.js';
-import { addToDenylist } from '../utils/tokenDenylist.js';
+import { addToDenylist, isDenylisted } from '../utils/tokenDenylist.js';
 import { addRefreshToDenylist, isRefreshDenylisted } from '../utils/refreshDenylist.js';
 
 // CSRF token storage (in production, use Redis or database)
@@ -110,6 +110,25 @@ function setRefreshCookie(res, refreshToken) {
     path: '/api/auth',
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
+}
+
+// Simple auth middleware for this router
+function authRequired(req, res, next) {
+  try {
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'Server misconfiguration' });
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    // Check if token is denylisted
+    if (payload.jti && isDenylisted(payload.jti)) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    req.user = payload;
+    next();
+  } catch {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
 }
 
 // Password strength calculation
@@ -549,6 +568,9 @@ router.post('/forgot-password',
                         Math.random().toString(36).substr(2) +
                         crypto.randomBytes(16).toString('base64url');
       
+      // Invalidate any existing reset tokens for this user to ensure single active token
+      await EmailToken.destroy({ where: { userId: user.id, purpose: 'reset' } });
+
       // Store reset token (expires in 15 minutes)
       await EmailToken.create({
         token: resetToken,
@@ -569,6 +591,32 @@ router.post('/forgot-password',
     }
   }
 );
+
+// Validate reset token without revealing existence of account
+router.get('/validate-reset', securityHeaders, async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token || typeof token !== 'string' || token.length < 64 || token.length > 200) {
+      return res.status(400).json({ valid: false, message: 'Invalid or expired reset link.' });
+    }
+
+    const found = await EmailToken.findOne({ where: { token, purpose: 'reset' } });
+    if (!found) {
+      return res.status(400).json({ valid: false, message: 'Invalid or expired reset link.' });
+    }
+
+    const tokenAge = Date.now() - new Date(found.createdAt).getTime();
+    const fifteenMinutes = 15 * 60 * 1000;
+    if (tokenAge > fifteenMinutes) {
+      await found.destroy();
+      return res.status(400).json({ valid: false, message: 'Reset link has expired.' });
+    }
+
+    return res.json({ valid: true });
+  } catch (err) {
+    return res.status(400).json({ valid: false, message: 'Invalid or expired reset link.' });
+  }
+});
 
 // Reset password endpoint
 router.post('/reset-password',
@@ -718,6 +766,81 @@ router.post('/reset-password',
       // Add delay even on errors to prevent timing attacks
       await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 100));
       res.status(500).json({ message: 'Failed to reset password. Please try again.' });
+    }
+  }
+);
+
+// Change password (authenticated user)
+router.post('/change-password',
+  authRequired,
+  [
+    body('currentPassword')
+      .notEmpty()
+      .withMessage('Current password is required'),
+    body('newPassword')
+      .isLength({ min: 8, max: 128 })
+      .withMessage('Password must be 8-128 characters')
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+      .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number')
+      .matches(/^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/)
+      .withMessage('Password contains invalid characters'),
+    body('confirmNewPassword')
+      .custom((value, { req }) => {
+        if (value !== req.body.newPassword) {
+          throw new Error('Passwords do not match');
+        }
+        return true;
+      })
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ 
+          message: 'Validation failed',
+          errors: errors.array().map(err => ({ field: err.path, message: err.msg }))
+        });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      const user = await User.findByPk(req.user.uid);
+      if (!user) return res.status(404).json({ message: 'User not found' });
+
+      // Verify current password
+      const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!ok) return res.status(400).json({ message: 'Current password is incorrect' });
+
+      // Prevent reusing current or recent passwords
+      if (await bcrypt.compare(newPassword, user.passwordHash)) {
+        return res.status(400).json({ message: 'New password must be different from your current password.' });
+      }
+
+      const strength = calculatePasswordStrength(newPassword);
+      if (strength.score < 3) {
+        return res.status(400).json({ message: 'Password is too weak. Please choose a stronger password.' });
+      }
+
+      const recent = await getRecentPasswordHashes(user.id, 3);
+      for (const oldHash of recent) {
+        if (await bcrypt.compare(newPassword, oldHash)) {
+          return res.status(400).json({ message: 'You cannot reuse a recent password. Please choose a different one.' });
+        }
+      }
+
+      // Update
+      const newHash = await bcrypt.hash(newPassword, 12);
+      user.passwordHash = newHash;
+      user.failedLoginAttempts = 0;
+      user.lockedUntil = null;
+      await storePasswordInHistory(user.id, newHash);
+      await user.save();
+
+      // Invalidate refresh token (force re-login on next refresh) and advise client to rotate access
+      res.clearCookie('refresh_token', { path: '/api/auth' });
+      return res.json({ message: 'Password changed successfully. Please log in again.' });
+    } catch (e) {
+      console.error('Change password error:', e);
+      return res.status(500).json({ message: 'Failed to change password. Please try again.' });
     }
   }
 );
