@@ -69,11 +69,15 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// Serve local images at /assets
+// Serve static images at /assets
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const imagesDir = path.resolve(__dirname, '../../images');
 app.use('/assets', express.static(imagesDir));
+
+// Serve uploaded files
+const uploadsDir = path.resolve(__dirname, '../../uploads');
+app.use('/uploads', express.static(uploadsDir));
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true });
