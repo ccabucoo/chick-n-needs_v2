@@ -4,9 +4,9 @@ function getApiBase() {
   try {
     // Vite provides import.meta.env in the browser build
     const fromEnv = import.meta && import.meta.env && import.meta.env.VITE_API_URL;
-    return fromEnv || 'http://localhost:4000';
+    return fromEnv || 'https://chicknneeds.shop/api';
   } catch (e) {
-    return 'http://localhost:4000';
+    return 'https://chicknneeds.shop/api';
   }
 }
 
