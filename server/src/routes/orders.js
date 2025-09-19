@@ -51,7 +51,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 router.post('/checkout', auth, async (req, res) => {
-  const { shippingAddress } = req.body; // { line1, city, phone, ... } or { id: addressId }
+  const { shippingAddress, direct } = req.body; // shippingAddress object or { id }, and optional direct { productId, quantity }
   const t = await sequelize.transaction();
   try {
     let address;
@@ -78,26 +78,42 @@ router.post('/checkout', auth, async (req, res) => {
       address = await Address.create({ ...shippingAddress, phone: rawPhone, userId: req.user.uid }, { transaction: t });
     }
     
-    const cartItems = await CartItem.findAll({ where: { userId: req.user.uid }, include: [Product], transaction: t, lock: t.LOCK.UPDATE });
-    if (cartItems.length === 0) {
-      await t.rollback();
-      return res.status(400).json({ message: 'Cart is empty' });
-    }
+    let cartItems = [];
+    let subtotal = 0;
 
-    // Validate stock and compute totals
-    for (const ci of cartItems) {
-      const product = await Product.findByPk(ci.productId, { transaction: t, lock: t.LOCK.UPDATE });
+    if (direct && direct.productId) {
+      const quantity = Math.max(1, parseInt(direct.quantity, 10) || 1);
+      const product = await Product.findByPk(direct.productId, { transaction: t, lock: t.LOCK.UPDATE });
       if (!product) {
         await t.rollback();
-        return res.status(400).json({ message: `Product not found (id ${ci.productId})` });
+        return res.status(400).json({ message: `Product not found (id ${direct.productId})` });
       }
-      if (product.stock < ci.quantity) {
+      if (product.stock < quantity) {
         await t.rollback();
         return res.status(400).json({ message: `Insufficient stock for ${product.name}. Available: ${product.stock}` });
       }
+      cartItems = [{ product, productId: product.id, quantity }];
+      subtotal = Number(product.price) * quantity;
+    } else {
+      cartItems = await CartItem.findAll({ where: { userId: req.user.uid }, include: [Product], transaction: t, lock: t.LOCK.UPDATE });
+      if (cartItems.length === 0) {
+        await t.rollback();
+        return res.status(400).json({ message: 'Cart is empty' });
+      }
+      // Validate stock and compute totals
+      for (const ci of cartItems) {
+        const product = await Product.findByPk(ci.productId, { transaction: t, lock: t.LOCK.UPDATE });
+        if (!product) {
+          await t.rollback();
+          return res.status(400).json({ message: `Product not found (id ${ci.productId})` });
+        }
+        if (product.stock < ci.quantity) {
+          await t.rollback();
+          return res.status(400).json({ message: `Insufficient stock for ${product.name}. Available: ${product.stock}` });
+        }
+      }
+      subtotal = cartItems.reduce((sum, ci) => sum + Number(ci.product.price) * ci.quantity, 0);
     }
-
-    const subtotal = cartItems.reduce((sum, ci) => sum + Number(ci.product.price) * ci.quantity, 0);
     const shippingFee = 0;
     const total = subtotal + shippingFee;
     const uniq = `${Date.now()}-${req.user.uid}-${Math.floor(Math.random()*1e6).toString().padStart(6,'0')}`;
@@ -117,10 +133,14 @@ router.post('/checkout', auth, async (req, res) => {
       const product = await Product.findByPk(ci.productId, { transaction: t, lock: t.LOCK.UPDATE });
       product.stock = product.stock - ci.quantity;
       await product.save({ transaction: t });
-      await OrderItem.create({ orderId: order.id, productId: ci.productId, quantity: ci.quantity, price: ci.product.price }, { transaction: t });
+      const price = ci.product ? ci.product.price : (product?.price || 0);
+      await OrderItem.create({ orderId: order.id, productId: ci.productId, quantity: ci.quantity, price }, { transaction: t });
     }
 
-    await CartItem.destroy({ where: { userId: req.user.uid }, transaction: t });
+    // Clear cart only when not a direct checkout
+    if (!direct || !direct.productId) {
+      await CartItem.destroy({ where: { userId: req.user.uid }, transaction: t });
+    }
     await t.commit();
     res.json(order);
   } catch (e) {

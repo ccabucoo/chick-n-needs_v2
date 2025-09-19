@@ -1,9 +1,11 @@
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { getImageUrl } from '../utils/imageUtils.js';
-import { healthyFetch, debouncedFetch, RequestCanceller } from '../utils/apiHealth.js';
+import { healthyFetch, RequestCanceller } from '../utils/apiHealth.js';
+import { getLocalCart, setLocalCart } from '../utils/cartUtils.js';
 
 export default function Catalog() {
+  const navigate = useNavigate();
   const [params, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -88,8 +90,7 @@ export default function Catalog() {
     }
   };
 
-  // Debounced search function
-  const debouncedApplyFilters = debouncedFetch(applyFilters, 500);
+  // Remove debounced auto-search; only search on explicit action
 
   // Load initial products on mount
   useEffect(() => {
@@ -153,6 +154,51 @@ export default function Catalog() {
     ).length;
   };
 
+  const handleSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    await applyFilters();
+  };
+
+  const addSingleToCart = async (product) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      const localCart = getLocalCart();
+      const existing = localCart.find(i => i.productId === product.id);
+      if (existing) {
+        existing.quantity = existing.quantity + 1;
+      } else {
+        if ((Number(product.stock ?? 1)) < 1) return false;
+        localCart.push({
+          id: Date.now(),
+          productId: product.id,
+          quantity: 1,
+          product: {
+            name: product.name,
+            price: product.price,
+            stock: product.stock
+          }
+        });
+      }
+      setLocalCart(localCart);
+      return true;
+    }
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/cart`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ productId: product.id, quantity: 1 })
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleCheckout = async (product) => {
+    navigate(`/checkout?buyNow=${product.id}`);
+  };
+
   return (
     <div>
       <div>
@@ -173,7 +219,7 @@ export default function Catalog() {
         </div>
       </div>
 
-      <div>
+      <form onSubmit={handleSubmit}>
         <div>
           <div>
             <label>Search Products</label>
@@ -182,8 +228,12 @@ export default function Catalog() {
               value={filters.q}
               onChange={e => {
                 handleFilterChange('q', e.target.value);
-                // Debounced search for better performance
-                debouncedApplyFilters();
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  applyFilters();
+                }
               }}
             />
           </div>
@@ -246,6 +296,7 @@ export default function Catalog() {
               <option value="name">Name</option>
               <option value="price">Price</option>
               <option value="createdAt">Newest</option>
+              <option value="sold">Most/Least Sold</option>
             </select>
           </div>
 
@@ -286,14 +337,14 @@ export default function Catalog() {
               Clear Filters
             </button>
             <button
-              onClick={applyFilters}
+              type="submit"
               disabled={loading}
             >
               {loading ? 'Searching...' : 'Search'}
             </button>
           </div>
         </div>
-      </div>
+      </form>
 
       {error && (
         <div style={{ 
@@ -343,44 +394,64 @@ export default function Catalog() {
             
             if (viewMode === 'list') {
               return (
-                <Link key={p.id} to={`/product/${p.id}`}>
-                  {firstImage && (
-                    <img src={getImageUrl(firstImage)} alt={p.name} />
-                  )}
-                  <div>
+                <div key={p.id}>
+                  <Link to={`/product/${p.id}`}>
+                    {firstImage && (
+                      <img src={getImageUrl(firstImage)} alt={p.name} />
+                    )}
                     <div>
-                      <h3>{p.name}</h3>
-                      <p>{category}</p>
-                      <p>{p.description?.substring(0, 100)}...</p>
-                    </div>
-                    <div>
-                      <div>₱{p.price}</div>
                       <div>
-                        {p.stock > 0 ? `${p.stock} in stock` : 'Out of stock'}
+                        <h3>{p.name}</h3>
+                        <p>{category}</p>
+                        <p>{p.description?.substring(0, 100)}...</p>
+                      </div>
+                      <div>
+                        <div>₱{p.price}</div>
+                        <div>
+                          {p.stock > 0 ? `${p.stock} in stock` : 'Out of stock'}
+                        </div>
                       </div>
                     </div>
+                  </Link>
+                  <div>
+                    <button
+                      disabled={Number(p.stock) <= 0}
+                      onClick={() => handleCheckout(p)}
+                    >
+                      Checkout
+                    </button>
                   </div>
-                </Link>
+                </div>
               );
             }
             
             return (
-              <Link key={p.id} to={`/product/${p.id}`}>
-                {firstImage && (
-                  <img src={getImageUrl(firstImage)} alt={p.name} />
-                )}
+              <div key={p.id}>
+                <Link to={`/product/${p.id}`}>
+                  {firstImage && (
+                    <img src={getImageUrl(firstImage)} alt={p.name} />
+                  )}
+                  <div>
+                    <h3>{p.name}</h3>
+                    <p>{category}</p>
+                    <div>₱{p.price}</div>
+                    <div>
+                      {Number(p.soldCount || 0)} sold
+                    </div>
+                    <div>
+                      {p.stock > 0 ? `${p.stock} in stock` : 'Out of stock'}
+                    </div>
+                  </div>
+                </Link>
                 <div>
-                  <h3>{p.name}</h3>
-                  <p>{category}</p>
-                  <div>₱{p.price}</div>
-                  <div>
-                    {Number(p.soldCount || 0)} sold
-                  </div>
-                  <div>
-                    {p.stock > 0 ? `${p.stock} in stock` : 'Out of stock'}
-                  </div>
+                  <button
+                    disabled={Number(p.stock) <= 0}
+                    onClick={() => handleCheckout(p)}
+                  >
+                    Checkout
+                  </button>
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

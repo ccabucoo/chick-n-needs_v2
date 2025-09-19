@@ -11,8 +11,9 @@ export default function Verify() {
   useEffect(() => {
     const status = params.get('status');
     if (status) {
-      setMessage(status);
-      setIsSuccess(/verified|success/i.test(status));
+      const normalized = /invalid token/i.test(status) ? 'Reset password expired' : status;
+      setMessage(normalized);
+      setIsSuccess(/verified|success/i.test(normalized));
       return;
     }
     const token = params.get('token');
@@ -24,7 +25,8 @@ export default function Verify() {
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/auth/verify?token=${encodeURIComponent(token)}`)
       .then(r => r.json())
       .then(d => {
-        const msg = d.message || 'Verification complete';
+        const raw = d.message || 'Verification complete';
+        const msg = /invalid token/i.test(raw) ? 'Reset password expired' : raw;
         setMessage(msg);
         setIsSuccess(/verified|success/i.test(msg));
       })

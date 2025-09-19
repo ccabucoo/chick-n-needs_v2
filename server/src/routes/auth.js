@@ -542,9 +542,9 @@ router.post('/forgot-password',
       // Find user by email
       const user = await User.findOne({ where: { email } });
       
-      // Always return success to prevent email enumeration
+      // If user does not exist, inform the client explicitly
       if (!user) {
-        return res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+        return res.status(404).json({ message: 'Email is not registered.' });
       }
 
       // Check if user has a recent password reset token (within 15 minutes)
@@ -628,7 +628,8 @@ router.post('/reset-password',
       .withMessage('Reset token is required')
       .isLength({ min: 64, max: 200 })
       .withMessage('Invalid token format')
-      .matches(/^[a-f0-9]+[a-z0-9]+[a-z0-9]+$/i)
+      // Accept base64url and alphanumeric characters used in our generated tokens
+      .matches(/^[A-Za-z0-9_-]+$/)
       .withMessage('Invalid token format'),
     body('password')
       .isLength({ min: 8, max: 128 })

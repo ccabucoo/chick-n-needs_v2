@@ -9,7 +9,7 @@ router.get('/',
   [
     query('q').optional().isLength({ max: 100 }).withMessage('Search query too long'),
     query('categoryId').optional().isInt({ min: 1 }).withMessage('Invalid category ID'),
-    query('sort').optional().isIn(['name', 'price', 'createdAt']).withMessage('Invalid sort field'),
+    query('sort').optional().isIn(['name', 'price', 'createdAt', 'sold']).withMessage('Invalid sort field'),
     query('order').optional().isIn(['asc', 'desc']).withMessage('Invalid order'),
     query('minPrice').optional().isFloat({ min: 0 }).withMessage('Invalid min price'),
     query('maxPrice').optional().isFloat({ min: 0 }).withMessage('Invalid max price'),
@@ -92,7 +92,9 @@ router.get('/',
         ]
       },
       include: [Category, ProductImage],
-      order: [[sort, order.toUpperCase()]],
+      order: sort === 'sold' 
+        ? [[sequelize.literal('soldCount'), order.toUpperCase()]]
+        : [[sort, order.toUpperCase()]],
       offset,
       limit
     });

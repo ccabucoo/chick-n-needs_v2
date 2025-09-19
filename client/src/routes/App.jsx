@@ -92,7 +92,7 @@ function App() {
             <button onClick={() => throttledNavigate('/cart')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>Cart</button>
             {isLoggedIn ? (
               <>
-                <button onClick={() => throttledNavigate('/orders')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>Orders</button>
+                <button onClick={() => throttledNavigate('/orders/pending')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>Orders</button>
                 <button onClick={() => throttledNavigate('/wishlist')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>Wishlist</button>
                 <button onClick={() => throttledNavigate('/profile')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>Profile</button>
                 {/* Notifications hidden for now */}

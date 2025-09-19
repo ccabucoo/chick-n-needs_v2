@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useLocation } from 'react-router-dom';
 import { navigationFetch, RequestCanceller } from '../utils/apiHealth.js';
 import { getImageUrl } from '../utils/imageUtils.js';
 
 export default function Orders() {
   const { id } = useParams();
+  const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -102,7 +103,7 @@ export default function Orders() {
     return (
       <div>
         <div>
-          <Link to="/orders">← Back to Orders</Link>
+          <Link to="/orders/pending">← Back to Orders</Link>
           <h1>Order #{order.id}</h1>
           <div>
             <div>Status: {order.status}</div>
@@ -151,25 +152,48 @@ export default function Orders() {
     );
   }
 
+  // Basic status nav and filtering
+  const path = location.pathname || '';
+  const currentStatus = path.endsWith('/pending') ? 'pending'
+    : path.endsWith('/on-delivery') ? 'on-delivery'
+    : path.endsWith('/completed') ? 'completed'
+    : '';
+
+  const visibleOrders = currentStatus
+    ? orders.filter(o => {
+        const status = String(o.status || '').toLowerCase();
+        if (currentStatus === 'on-delivery') {
+          // treat in-transit statuses as on-delivery if present
+          return status === 'on delivery' || status === 'on-delivery' || status === 'shipping' || status === 'shipped' || status === 'out for delivery';
+        }
+        return status === currentStatus;
+      })
+    : orders;
+
   return (
     <div>
       <div>
         <h1>My Orders</h1>
         <p>Track and manage your orders</p>
+        <div>
+          <Link to="/orders/pending">Pending</Link> |{' '}
+          <Link to="/orders/on-delivery">On Delivery</Link> |{' '}
+          <Link to="/orders/completed">Completed</Link>
+        </div>
       </div>
       
-      {orders.length === 0 ? (
+      {visibleOrders.length === 0 ? (
         <div>
           <div>📦</div>
           <h2>No orders found</h2>
-          <p>You haven't placed any orders yet.</p>
+          <p>{currentStatus ? `No ${currentStatus} orders.` : "You haven't placed any orders yet."}</p>
           <Link to="/catalog">
             Start Shopping
           </Link>
         </div>
       ) : (
         <div>
-          {orders.map(o => {
+          {visibleOrders.map(o => {
             const firstItem = (o.order_items && o.order_items[0]) || null;
             const label = firstItem?.product?.name || `Order #${o.id}`;
             return (

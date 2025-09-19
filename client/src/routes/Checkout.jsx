@@ -187,11 +187,16 @@ export default function Checkout() {
       shippingAddress = selected; // This includes the ID
     }
     
+    // Support direct buy-now via query param
+    const params = new URLSearchParams(window.location.search);
+    const buyNowId = params.get('buyNow');
+    const payload = buyNowId ? { shippingAddress, direct: { productId: Number(buyNowId), quantity: 1 } } : { shippingAddress };
+
     const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/orders/checkout`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ shippingAddress })
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(payload)
     });
     if (res.ok) {
-      navigate('/orders');
+      navigate('/orders/pending');
     } else {
       const data = await res.json().catch(() => ({}));
       setError(data.message || 'Checkout failed');

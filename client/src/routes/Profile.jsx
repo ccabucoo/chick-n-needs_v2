@@ -6,7 +6,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ firstName: '', lastName: '', phone: '' });
+  const [form, setForm] = useState({ phone: '' });
   const [newAddress, setNewAddress] = useState({ line1: '', line2: '', barangay: '', city: '', state: '', postalCode: '', country: 'Philippines' });
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [changing, setChanging] = useState(false);
@@ -28,8 +28,7 @@ export default function Profile() {
           setError(data.message);
         } else {
           setData(data);
-          // Keep name fields empty so inputs show only placeholders
-          setForm({ firstName: '', lastName: '', phone: data.phone || '' });
+          setForm({ phone: data.phone || '' });
         }
       })
       .catch(err => setError('Failed to load profile'))
@@ -107,7 +106,7 @@ export default function Profile() {
               const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/profile`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ firstName: form.firstName, lastName: form.lastName, phone: form.phone })
+                body: JSON.stringify({ phone: form.phone })
               });
               const updated = await res.json();
               if (res.ok) {
@@ -119,19 +118,11 @@ export default function Profile() {
           }}>
             <div>
               <label>First Name</label>
-              <input
-                value={form.firstName}
-                onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))}
-                placeholder="First Name"
-              />
+              <p>{data.firstName}</p>
             </div>
             <div>
               <label>Last Name</label>
-              <input
-                value={form.lastName}
-                onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))}
-                placeholder="Last Name"
-              />
+              <p>{data.lastName}</p>
             </div>
             <div>
               <label>Phone</label>
@@ -234,7 +225,7 @@ export default function Profile() {
           </div>
           <div>
             <label>Country</label>
-            <input value={newAddress.country} onChange={e => setNewAddress(v => ({ ...v, country: e.target.value }))} />
+          <input value={newAddress.country} disabled />
           </div>
           <button type="submit">Add Address</button>
         </form>

@@ -140,6 +140,10 @@ export default function Product() {
     }
   };
 
+  const checkoutNow = async () => {
+    navigate(`/checkout?buyNow=${data.id}`);
+  };
+
   if (loading) return (
     <div>
       <button onClick={() => navigate(-1)}>
@@ -209,6 +213,12 @@ export default function Product() {
               onClick={addToCart}
             >
               Add to Cart
+            </button>
+            <button 
+              disabled={Number(data.stock) <= 0}
+              onClick={checkoutNow}
+            >
+              Checkout
             </button>
             <button 
               
