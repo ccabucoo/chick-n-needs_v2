@@ -1,19 +1,20 @@
 module.exports = {
   apps: [{
     name: 'chicknneeds-api',
-    script: 'src/index.js',
-    cwd: '/var/www/chicknneeds.shop/server',
+    script: './src/index.js',
     instances: 1,
     autorestart: true,
     watch: false,
     max_memory_restart: '1G',
     env: {
       NODE_ENV: 'production',
-      PORT: 4000
+      PORT: 4000,
+      HOST: '0.0.0.0'
     },
-    error_file: '/var/log/pm2/chicknneeds-api-error.log',
-    out_file: '/var/log/pm2/chicknneeds-api-out.log',
-    log_file: '/var/log/pm2/chicknneeds-api-combined.log',
-    time: true
+    error_file: './logs/err.log',
+    out_file: './logs/out.log',
+    log_file: './logs/combined.log',
+    time: true,
+    log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
   }]
 };
