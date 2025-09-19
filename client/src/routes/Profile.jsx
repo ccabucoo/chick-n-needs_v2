@@ -19,7 +19,7 @@ export default function Profile() {
       return;
     }
     
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/profile`, { 
+    fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/profile`, { 
       headers: { Authorization: `Bearer ${token}` } 
     })
       .then(r => r.json())
@@ -75,7 +75,7 @@ export default function Profile() {
                 setPwMsg('');
                 setChanging(true);
                 try {
-                  const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/auth/forgot-password`, {
+                  const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/auth/forgot-password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: data.email })
@@ -104,7 +104,7 @@ export default function Profile() {
             e.preventDefault();
             setSaving(true);
             try {
-              const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/profile`, {
+              const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/profile`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ firstName: form.firstName, lastName: form.lastName, phone: form.phone })
@@ -160,13 +160,13 @@ export default function Profile() {
                   <button
                     onClick={async () => {
                       if (!confirm('Delete this address?')) return;
-                      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/profile/addresses/${a.id}`, {
+                      await fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/profile/addresses/${a.id}`, {
                         method: 'DELETE',
                         headers: { Authorization: `Bearer ${token}` }
                       });
                       // reload profile
                       setLoading(true);
-                      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/profile`, { headers: { Authorization: `Bearer ${token}` } })
+                      fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/profile`, { headers: { Authorization: `Bearer ${token}` } })
                         .then(r => r.json())
                         .then(setData)
                         .finally(() => setLoading(false));
@@ -190,7 +190,7 @@ export default function Profile() {
         ) : (
         <form onSubmit={async (e) => {
           e.preventDefault();
-          const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/profile/addresses`, {
+          const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/profile/addresses`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify(newAddress)
@@ -199,7 +199,7 @@ export default function Profile() {
             // refresh list
             setNewAddress({ line1: '', line2: '', barangay: '', city: '', state: '', postalCode: '', country: 'Philippines' });
             setLoading(true);
-            fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/profile`, { headers: { Authorization: `Bearer ${token}` } })
+            fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/profile`, { headers: { Authorization: `Bearer ${token}` } })
               .then(r => r.json())
               .then(setData)
               .finally(() => setLoading(false));

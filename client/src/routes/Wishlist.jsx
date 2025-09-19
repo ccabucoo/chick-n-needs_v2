@@ -6,7 +6,7 @@ export default function Wishlist() {
   async function removeFromWishlist(id) {
     if (!confirm('Remove this item from wishlist?')) return;
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/wishlist/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/wishlist/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -26,7 +26,7 @@ export default function Wishlist() {
       return;
     }
     
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/wishlist`, { 
+    fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/wishlist`, { 
       headers: { Authorization: `Bearer ${token}` } 
     })
       .then(r => r.json())

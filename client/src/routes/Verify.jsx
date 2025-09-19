@@ -21,7 +21,7 @@ export default function Verify() {
       setIsSuccess(false);
       return;
     }
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/auth/verify?token=${encodeURIComponent(token)}`)
+    fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/auth/verify?token=${encodeURIComponent(token)}`)
       .then(r => r.json())
       .then(d => {
         const msg = d.message || 'Verification complete';

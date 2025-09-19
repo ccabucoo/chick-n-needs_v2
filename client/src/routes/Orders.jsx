@@ -30,8 +30,8 @@ export default function Orders() {
         const controller = requestCanceller.current.createController(requestKey);
 
         const url = id 
-          ? `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/orders/${id}`
-          : `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/orders`;
+          ? `${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/orders/${id}`
+          : `${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/orders`;
 
         const response = await navigationFetch(url, { 
           headers: { Authorization: `Bearer ${token}` },

@@ -22,7 +22,7 @@ export default function ResetPassword() {
     }
 
     // Validate reset token first
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/auth/validate-reset?token=${encodeURIComponent(token)}`, {
+    fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/auth/validate-reset?token=${encodeURIComponent(token)}`, {
       method: 'GET',
       credentials: 'include',
       headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -37,7 +37,7 @@ export default function ResetPassword() {
       setTokenValid(true);
 
       // Fetch CSRF token only if reset token is valid
-      return fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/auth/csrf-token`, {
+      return fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/auth/csrf-token`, {
         method: 'GET',
         credentials: 'include'
       })
@@ -99,7 +99,7 @@ export default function ResetPassword() {
     setError('');
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/auth/reset-password`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

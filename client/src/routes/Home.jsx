@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 export default function Home() {
   const [categories, setCategories] = useState([]);
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/categories`).then(r => r.json()).then(setCategories);
+    fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/categories`).then(r => r.json()).then(setCategories);
   }, []);
   return (
     <div>

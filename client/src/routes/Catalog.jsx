@@ -31,7 +31,7 @@ export default function Catalog() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const response = await healthyFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/categories`);
+        const response = await healthyFetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/categories`);
         const data = await response.json();
         setCategories(data);
       } catch (error) {
@@ -49,7 +49,7 @@ export default function Catalog() {
     setError(null);
     setAppliedFilters({ ...filters });
     
-    const url = new URL(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/products`);
+    const url = new URL(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/products`);
     
     // Only add parameters that have meaningful values
     const nextParams = {};
@@ -125,7 +125,7 @@ export default function Catalog() {
     setError(null);
     
     try {
-      const response = await healthyFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/products`);
+      const response = await healthyFetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/products`);
       const data = await response.json();
       if (Array.isArray(data)) {
         setItems(data);

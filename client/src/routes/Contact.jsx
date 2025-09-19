@@ -18,7 +18,7 @@ export default function Contact() {
     }
     try {
       setLoading(true);
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/contact`, { 
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/contact`, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ name: name.trim(), email: email.trim(), message: message.trim(), subject: subject.trim(), orderNo: orderNo.trim() }) 

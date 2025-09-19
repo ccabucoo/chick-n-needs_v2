@@ -499,7 +499,7 @@ router.post('/refresh', (req, res) => {
 
 router.get('/verify', async (req, res) => {
   const { token } = req.query;
-  const appUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
+  const appUrl = process.env.PUBLIC_APP_URL || 'https://chicknneeds.shop';
   const redirect = (msg) => res.redirect(`${appUrl}/verify?status=${encodeURIComponent(msg)}`);
 
   if (!token) return redirect('Missing token');

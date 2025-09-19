@@ -43,7 +43,7 @@ app.use(cors({
       process.env.PUBLIC_APP_URL
     ].filter(Boolean);
     if (!origin) return callback(null, true);
-    if (allowed.length === 0) return callback(null, origin === 'http://localhost:5173');
+    if (allowed.length === 0) return callback(null, origin === 'https://chicknneeds.shop');
     if (allowed.includes(origin)) return callback(null, true);
     return callback(new Error('Not allowed by CORS'));
   },

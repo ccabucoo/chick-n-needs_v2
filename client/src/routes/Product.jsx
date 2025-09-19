@@ -21,7 +21,7 @@ export default function Product() {
   });
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/products/${id}`)
+    fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/products/${id}`)
       .then(r => r.json())
       .then(setData)
       .finally(() => setLoading(false));
@@ -29,7 +29,7 @@ export default function Product() {
 
   useEffect(() => {
     if (!id) return;
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/reviews/${id}`)
+    fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/reviews/${id}`)
       .then(r => r.json())
       .then(list => {
         if (Array.isArray(list)) setReviews(list);
@@ -91,7 +91,7 @@ export default function Product() {
 
     // Add to server cart for logged in users
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/cart`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/cart`, {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
         body: JSON.stringify({ productId: data.id, quantity: 1 })
@@ -120,7 +120,7 @@ export default function Product() {
     }
     
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/wishlist`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/wishlist`, {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
         body: JSON.stringify({ productId: data.id })
@@ -308,7 +308,7 @@ export default function Product() {
           const comment = e.currentTarget.comment.value;
           
           try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/reviews/${data.id}`, { 
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/reviews/${data.id}`, { 
               method: 'POST', 
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
               body: JSON.stringify({ rating, comment }) 

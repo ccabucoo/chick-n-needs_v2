@@ -56,8 +56,8 @@ export const passwordResetRateLimit = rateLimit({
 export const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
-      process.env.FRONTEND_URL || 'http://localhost:5173',
-      process.env.PUBLIC_APP_URL || 'http://localhost:5173'
+      process.env.FRONTEND_URL || 'https://chicknneeds.shop',
+      process.env.PUBLIC_APP_URL || 'https://chicknneeds.shop'
     ];
     
     // Allow requests with no origin (mobile apps, etc.)

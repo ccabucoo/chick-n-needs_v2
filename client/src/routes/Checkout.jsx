@@ -35,11 +35,11 @@ export default function Checkout() {
         const profileController = requestCanceller.current.createController('checkout-profile');
 
         const [cartRes, profileRes] = await Promise.all([
-          navigationFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/cart`, {
+          navigationFetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/cart`, {
             headers: { Authorization: `Bearer ${token}` },
             signal: cartController.signal
           }),
-          navigationFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/profile`, {
+          navigationFetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/profile`, {
             headers: { Authorization: `Bearer ${token}` },
             signal: profileController.signal
           })
@@ -187,7 +187,7 @@ export default function Checkout() {
       shippingAddress = selected; // This includes the ID
     }
     
-    const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/orders/checkout`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/orders/checkout`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ shippingAddress })
     });
     if (res.ok) {

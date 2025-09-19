@@ -13,7 +13,7 @@ export default function Notifications() {
       return;
     }
     
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/notifications`, { 
+    fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/notifications`, { 
       headers: { Authorization: `Bearer ${token}` } 
     })
       .then(r => r.json())

@@ -4,8 +4,8 @@ import { EmailToken } from '../models/index.js';
 import crypto from 'crypto';
 
 const from = process.env.EMAIL_FROM || 'no-reply@example.com';
-const appBaseUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
-const apiBaseUrl = process.env.PUBLIC_API_URL || 'http://localhost:4000';
+const appBaseUrl = process.env.PUBLIC_APP_URL || 'https://chicknneeds.shop';
+const apiBaseUrl = process.env.PUBLIC_API_URL || 'https://api.chicknneeds.shop';
 
 if (process.env.SENDGRID_API_KEY) {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);

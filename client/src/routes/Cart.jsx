@@ -30,7 +30,7 @@ export default function Cart() {
       requestCanceller.current.cancel('cart');
       const controller = requestCanceller.current.createController('cart');
       
-      const response = await healthyFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/cart`, { 
+      const response = await healthyFetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/cart`, { 
         headers: { Authorization: `Bearer ${token}` },
         signal: controller.signal
       });
@@ -75,7 +75,7 @@ export default function Cart() {
     }
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/cart/${itemId}`, { 
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/cart/${itemId}`, { 
         method: 'PATCH', 
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
         body: JSON.stringify({ quantity }) 
@@ -102,7 +102,7 @@ export default function Cart() {
     }
 
     try {
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/cart/${itemId}`, { 
+      await fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/cart/${itemId}`, { 
         method: 'DELETE', 
         headers: { Authorization: `Bearer ${token}` } 
       });
@@ -140,7 +140,7 @@ export default function Cart() {
     }
     try {
       await Promise.all(items.filter(i => selectedIds.has(i.id)).map(i => 
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/cart/${i.id}`, {
+        fetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/cart/${i.id}`, {
           method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
         })
       ));

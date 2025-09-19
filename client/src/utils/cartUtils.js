@@ -19,7 +19,7 @@ export const clearLocalCart = () => {
 export const mergeCarts = async (localCart, token) => {
   if (!localCart || localCart.length === 0) return;
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+  const API_URL = import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop';
   
   try {
     // Get current server cart
