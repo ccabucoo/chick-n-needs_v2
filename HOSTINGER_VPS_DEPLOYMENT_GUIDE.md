@@ -87,7 +87,7 @@ git clone https://github.com/ccabucoo/chick-n-needs_v2.git .
 git checkout Hostinger
 
 # Import database schema
-mysql -u chicknneeds_user -p chicknneeds < database/schema.sql
+mysql -u chicknneeds_user -p chicknneeds < database/complete-setup.sql
 
 # Install dependencies
 cd server

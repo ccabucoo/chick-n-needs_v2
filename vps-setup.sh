@@ -57,7 +57,7 @@ git checkout Hostinger
 
 # Import database schema
 echo "📊 Importing database schema..."
-mysql -u chicknneeds_user -p chicknneeds < database/schema.sql
+mysql -u chicknneeds_user -p chicknneeds < database/complete-setup.sql
 
 # Install dependencies
 echo "📦 Installing dependencies..."
