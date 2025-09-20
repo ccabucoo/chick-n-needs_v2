@@ -1,0 +1,2 @@
+-- Additional products can be added here
+-- Note: Broiler Feed is already included in the main schema.sql file

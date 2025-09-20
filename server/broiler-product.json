@@ -1,0 +1,14 @@
+{
+  "name": "Broiler Feed",
+  "slug": "broiler-feed",
+  "description": "High-quality broiler feed for optimal growth and meat production. Formulated with essential nutrients for healthy broiler chickens.",
+  "price": 1350.00,
+  "stock": 40,
+  "categoryId": 1,
+  "attributes": {
+    "brand": "Premium Poultry",
+    "weight": "50kg",
+    "type": "Broiler Feed",
+    "age": "All stages"
+  }
+}
