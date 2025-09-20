@@ -114,9 +114,21 @@ export const securityLogger = (req, res, next) => {
     };
     
     // Log suspicious activities
-    if (res.statusCode >= 400) {
-      console.warn('Suspicious activity detected:', logData);
-    }
+if (res.statusCode >= 400) {
+  // Only log as suspicious if it's a real security concern
+  const isRealSuspicious = (
+    res.statusCode >= 500 || // Server errors
+    res.statusCode === 429 || // Rate limiting
+    res.statusCode === 403 || // Forbidden
+    (res.statusCode === 400 && req.url.includes('/api/auth/')) // Auth errors
+  );
+  
+  if (isRealSuspicious) {
+    console.warn('Suspicious activity detected:', logData);
+  } else {
+    console.log('Request failed:', logData);
+  }
+}
     
     // Log all API requests
     if (req.url.startsWith('/api/')) {

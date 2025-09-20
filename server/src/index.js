@@ -25,6 +25,7 @@ import {
 } from './middleware/security.js';
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Ensure critical envs are set
 if (!process.env.JWT_SECRET) {
