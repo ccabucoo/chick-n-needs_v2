@@ -34,7 +34,7 @@ Step-by-step setup (Windows)
    Start MySql
 
 3) Create the database (phpMyAdmin method) ( PAG NASETUP TO DI NA NEED ISETUP ULIT)
-   - Open http://localhost/phpmyadmin
+   - Open https://chicknneeds.shop/phpmyadmin
    - Click Databases → Create database:
      rename: chicknneeds → Create.
    - Select the chicknneeds DB → Import → Choose file → select database/schema.sql → Go.
@@ -50,14 +50,14 @@ Step-by-step setup (Windows)
    cd server
    npm run dev
     ( to check api )
-   - API runs at http://localhost:4000
-   - Health: http://localhost:4000/api/health
+   - API runs at https://api.chicknneeds.shop
+   - Health: https://api.chicknneeds.shop/api/health
 
 8) Start the frontend (Web)
    cd paste file path
    cd client
    npm run dev
-   - App runs at http://localhost:5173
+   - App runs at https://chicknneeds.shop
     ( eto yung frontend server o kaya yung website na makikita ng user)
 
 9) Verify login/flows
@@ -94,8 +94,8 @@ Quick Start (Windows)
      MYSQL_USER=root
      MYSQL_PASSWORD=
      MYSQL_DATABASE=chicknneeds
-     PUBLIC_APP_URL=http://localhost:5173
-     FRONTEND_URL=http://localhost:5173
+     PUBLIC_APP_URL=https://chicknneeds.shop
+     FRONTEND_URL=https://chicknneeds.shop
      BREVO_API_KEY=your_brevo_key
    - npm install
    - npm run dev
@@ -104,7 +104,7 @@ Quick Start (Windows)
    - cd client
    - npm install
    - Create `.env` with:
-     VITE_API_URL=http://localhost:4000
+     VITE_API_URL=https://api.chicknneeds.shop
    - npm run dev
 
 Environment Files
