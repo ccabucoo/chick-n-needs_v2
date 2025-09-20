@@ -27,7 +27,7 @@ export const securityHeaders = helmet({
 // Rate limiting for auth endpoints
 export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs
+  max: 10, // Limit each IP to 10 requests per windowMs
   message: {
     error: 'Too many authentication attempts, please try again later.',
     retryAfter: '15 minutes'
@@ -129,11 +129,11 @@ export const securityLogger = (req, res, next) => {
 
 // General rate limiting
 export const generalRateLimit = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 60 * 1000, // 1 minute
+  max: 250, // Limit each IP to 250 requests per minute
   message: {
     error: 'Too many requests, please try again later.',
-    retryAfter: '15 minutes'
+    retryAfter: '1 minute'
   },
   standardHeaders: true,
   legacyHeaders: false
