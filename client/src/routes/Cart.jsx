@@ -157,8 +157,9 @@ export default function Cart() {
       navigate('/login');
       return;
     }
-    // Note: checkout currently processes all cart items
-    navigate('/checkout');
+    // Pass selected item IDs to checkout
+    const selectedIdsArray = Array.from(selectedIds);
+    navigate(`/checkout?selected=${selectedIdsArray.join(',')}`);
   };
 
   useEffect(() => { reload(); }, [token]);
@@ -260,7 +261,7 @@ export default function Cart() {
                     Remove
                   </button>
                   <button
-                    onClick={() => navigate(token ? '/checkout' : '/login')}
+                    onClick={() => navigate(token ? `/checkout?selected=${i.id}` : '/login')}
                   >
                     Checkout
                   </button>

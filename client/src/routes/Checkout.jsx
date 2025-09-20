@@ -34,45 +34,101 @@ export default function Checkout() {
         const cartController = requestCanceller.current.createController('checkout-cart');
         const profileController = requestCanceller.current.createController('checkout-profile');
 
-        const [cartRes, profileRes] = await Promise.all([
-          navigationFetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/cart`, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: cartController.signal
-          }),
-          navigationFetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/profile`, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: profileController.signal
-          })
-        ]);
+        // Check for selected items or buy now parameter
+        const params = new URLSearchParams(window.location.search);
+        const selectedIds = params.get('selected');
+        const buyNowId = params.get('buyNow');
         
-        const cartData = await cartRes.json();
-        const profileData = await profileRes.json();
+        let cartRes, profileRes;
         
-        if (Array.isArray(cartData)) {
-          setItems(cartData);
-        } else {
-          setError(cartData.message || 'Failed to load cart');
-        }
-        
-        if (profileData.addresses && Array.isArray(profileData.addresses)) {
-          setSavedAddresses(profileData.addresses);
-          if (profileData.addresses.length > 0 && !selectedAddressId && !useNewAddress) {
-            setSelectedAddressId(String(profileData.addresses[0].id));
-          }
-          if (profileData.addresses.length === 0) {
+        if (buyNowId) {
+          // Direct buy now - fetch single product
+          const [productRes, profileResData] = await Promise.all([
+            navigationFetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/products/${buyNowId}`, {
+              signal: cartController.signal
+            }),
+            navigationFetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/profile`, {
+              headers: { Authorization: `Bearer ${token}` },
+              signal: profileController.signal
+            })
+          ]);
+          
+          const productData = await productRes.json();
+          const profileData = await profileResData.json();
+          
+          // Create a cart item structure for the single product
+          setItems([{
+            id: `buynow-${buyNowId}`,
+            productId: Number(buyNowId),
+            quantity: 1,
+            product: productData
+          }]);
+          
+          if (profileData.addresses && Array.isArray(profileData.addresses)) {
+            setSavedAddresses(profileData.addresses);
+            if (profileData.addresses.length > 0 && !selectedAddressId && !useNewAddress) {
+              setSelectedAddressId(String(profileData.addresses[0].id));
+            }
+            if (profileData.addresses.length === 0) {
+              setUseNewAddress(true);
+              setSelectedAddressId('');
+            } else {
+              const firstAddr = profileData.addresses[0];
+              if (useNewAddress && !address.phone && firstAddr?.phone) {
+                setAddress(prev => ({ ...prev, phone: firstAddr.phone }));
+              }
+            }
+          } else {
             setUseNewAddress(true);
             setSelectedAddressId('');
-          } else {
-            // Prefill phone from first saved address if new address form is shown and phone is empty
-            const firstAddr = profileData.addresses[0];
-            if (useNewAddress && !address.phone && firstAddr?.phone) {
-              setAddress(prev => ({ ...prev, phone: firstAddr.phone }));
-            }
           }
         } else {
-          // No addresses field -> allow new address entry
-          setUseNewAddress(true);
-          setSelectedAddressId('');
+          // Regular cart checkout
+          [cartRes, profileRes] = await Promise.all([
+            navigationFetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/cart`, {
+              headers: { Authorization: `Bearer ${token}` },
+              signal: cartController.signal
+            }),
+            navigationFetch(`${import.meta.env.VITE_API_URL || 'https://api.chicknneeds.shop'}/api/profile`, {
+              headers: { Authorization: `Bearer ${token}` },
+              signal: profileController.signal
+            })
+          ]);
+          
+          const cartData = await cartRes.json();
+          const profileData = await profileRes.json();
+          
+          if (Array.isArray(cartData)) {
+            // Filter items if specific items are selected
+            if (selectedIds) {
+              const selectedIdsArray = selectedIds.split(',').map(id => parseInt(id.trim()));
+              const filteredItems = cartData.filter(item => selectedIdsArray.includes(item.id));
+              setItems(filteredItems);
+            } else {
+              setItems(cartData);
+            }
+          } else {
+            setError(cartData.message || 'Failed to load cart');
+          }
+          
+          if (profileData.addresses && Array.isArray(profileData.addresses)) {
+            setSavedAddresses(profileData.addresses);
+            if (profileData.addresses.length > 0 && !selectedAddressId && !useNewAddress) {
+              setSelectedAddressId(String(profileData.addresses[0].id));
+            }
+            if (profileData.addresses.length === 0) {
+              setUseNewAddress(true);
+              setSelectedAddressId('');
+            } else {
+              const firstAddr = profileData.addresses[0];
+              if (useNewAddress && !address.phone && firstAddr?.phone) {
+                setAddress(prev => ({ ...prev, phone: firstAddr.phone }));
+              }
+            }
+          } else {
+            setUseNewAddress(true);
+            setSelectedAddressId('');
+          }
         }
       } catch (e) {
         if (e.name !== 'AbortError') {
