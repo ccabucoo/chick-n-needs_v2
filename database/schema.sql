@@ -257,22 +257,6 @@ CREATE TABLE `users` (
 -- --------------------------------------------------------
 
 --
--- ALTER TABLE statements for existing databases
--- Run these if you already have the database set up
---
-
--- Add password_history column to users table
-ALTER TABLE `users` ADD COLUMN `password_history` text DEFAULT NULL AFTER `password_hash`;
-
--- Add full_name column to users table (if not present) and backfill
-ALTER TABLE `users` ADD COLUMN `full_name` varchar(201) DEFAULT NULL AFTER `password_history`;
-UPDATE `users` 
-SET `full_name` = TRIM(CONCAT(COALESCE(`first_name`, ''), ' ', COALESCE(`last_name`, ''))) 
-WHERE `first_name` IS NOT NULL OR `last_name` IS NOT NULL;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `wishlists`
 --
 
